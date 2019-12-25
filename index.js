@@ -5,20 +5,20 @@ const cors = require('cors');
 const app = express();
 const port = 3000;
 const bodyParser = require("body-parser");
+const https = require("https");
 
-
-const proxyUrl = 'https://bot.aimylogic.com/restapi/google/webhook/vTNnGbXl:e1dd8f1b900d5a049c341fa41fb656595b9ca182';
-const ngUrl = 'https://fac5a31e.ngrok.io';
-
-
+const proxyHost = 'bot.aimylogic.com';
+const proxyPath = '/restapi/google/webhook/vTNnGbXl:e1dd8f1b900d5a049c341fa41fb656595b9ca182';
+// const proxyHost = 'zb04.just-ai.com';
+// const proxyPath = '/chatadapter/chatapi/webhook/yandex/fBpmbPbq:75c24cf503a4301cad73d53c72111eafd0011af9';
+const proxyUrl = `https://${proxyHost}${proxyPath}`;
+const ngUrl = 'https://3bebd4cd.ngrok.io';
 
 app.use(bodyParser.urlencoded({
     extended: true
 }));
 
-app.use(cors({
-    origin: "*",
-}));
+app.use(cors());
 app.use(express.static('public'));
 
 /**bodyParser.json(options)
@@ -43,8 +43,10 @@ app.get('/', (req, res) => {
 });
 app.get('/html', (req, res) => {
     console.log(__dirname+'/public/index.html');
+    // console.log(__dirname+'/public/exportTest/testGD.html');
 
     res.sendFile(path.resolve(__dirname+'/public/index.html'));
+    // res.sendFile(path.resolve(__dirname+'/public/exportTest/testGD.html'));
 
     /*let url = newurl+req.url;
     let r = null;
@@ -56,18 +58,40 @@ app.get('/html', (req, res) => {
     req.pipe(r).pipe(res);*/
 });
 
-function requestData(params){
+function requestData(params, data){
     return new Promise(function(resolve, reject){
-        request(params, function (error, response, body) {
+        const headers = {
+            ...params.headers,
+            'Content-Type': 'application/json',
+            'Content-Length': data.length
+        }
+        const req = https.request({...params, headers}, function (res) {
             // in addition to parsing the value, deal with possible errors
-            if (error) return reject(error);
-            try {
-                // JSON.parse() can throw an exception if not valid JSON
-                resolve(response);
-            } catch(e) {
-                reject(e);
-            }
+            // if (error) return reject(error);
+            var body = '';
+
+            res.on('data', function(chunk){
+                body += chunk;
+            });
+
+            res.on('end', function(){
+                try {
+                    const response = JSON.parse(body);
+                    console.log(response)
+                    // JSON.parse() can throw an exception if not valid JSON
+                    resolve({body: response});
+                } catch(e) {
+                    reject(e);
+                }
+            });
+            res.on('data' , d => {
+            })
         });
+        req.write(data)
+        req.on('error', error => {
+            if (error) reject(error);
+        })
+        req.end()
     });
 }
 
@@ -80,11 +104,14 @@ app.use(function (req, res, next) {
 app.post('/', (req, res) => {
     requestData({
         qs:req.query,
-        uri: proxyUrl,
+        hostname:proxyHost,
+        path:proxyPath,
+        // uri: proxyUrl,
         method: req.method,
-        json: req.body,
-        headers: Object.assign({}, req.headers, {host: 'bot.aimylogic.com'})
-    })
+        // json: req.body,
+        headers: Object.assign({}, req.headers, {host: proxyHost}),
+        gzip: true
+    }, JSON.stringify(req.body))
         .then((data)=>{
             console.log(JSON.stringify(data.body));
             // res.json(data.body);
@@ -144,8 +171,6 @@ app.post('/', (req, res) => {
             console.error(e);
         });
 });
-
-
 
 app.listen(port, (err) => {
     if (err) {
