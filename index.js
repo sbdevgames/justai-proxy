@@ -12,7 +12,7 @@ const proxyPath = '/restapi/google/webhook/vTNnGbXl:e1dd8f1b900d5a049c341fa41fb6
 // const proxyHost = 'zb04.just-ai.com';
 // const proxyPath = '/chatadapter/chatapi/webhook/yandex/fBpmbPbq:75c24cf503a4301cad73d53c72111eafd0011af9';
 const proxyUrl = `https://${proxyHost}${proxyPath}`;
-const ngUrl = 'https://3bebd4cd.ngrok.io';
+const ngUrl = 'http://34.240.159.254:9091';
 
 app.use(bodyParser.urlencoded({
     extended: true
